@@ -45,6 +45,9 @@ jobs:
       - name: Build extension
         run: make extension
 
+      - name: Generate Assets.car
+        run: bash scripts/generate-assets-car.sh
+
       - name: Fetch and setup
         run: |
           make fetch
