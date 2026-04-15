@@ -34,12 +34,7 @@ run "cp -v $REPO/settings/cloakfox.cfg lw/cloakfox.cfg"
 [ -f "$REPO/settings/properties.json" ] && run "cp -v $REPO/settings/properties.json lw/"
 run 'touch lw/moz.build'
 
-# Copy bundled extension XPI if it exists
-# Goes to browser/extensions/ (app scope) — discovered via enabledScopes
-if [ -f "$REPO/cloakfox-shield.xpi" ]; then
-    run "mkdir -p browser/extensions"
-    run "cp -v $REPO/cloakfox-shield.xpi browser/extensions/cloakfox-shield@cloakfox.xpi"
-fi
+# Extension is copied as part of additions/ (browser/extensions/cloakfox-shield/)
 
 # Copy librewolf pack_vs.py (referenced by build system)
 run "cp -v '$REPO/patches/librewolf/pack_vs.py' build/vs/" || true

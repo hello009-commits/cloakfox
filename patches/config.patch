@@ -2,14 +2,13 @@ diff --git a/browser/installer/package-manifest.in b/browser/installer/package-m
 index 6bb2e64906..fbdb0b26ea 100644
 --- a/browser/installer/package-manifest.in
 +++ b/browser/installer/package-manifest.in
-@@ -250,6 +250,12 @@
+@@ -250,6 +250,11 @@
  #endif
  #endif
  
 +; Cloakfox specific files
 +@RESPATH@/defaults/pref/local-settings.js
 +@RESPATH@/distribution/policies.json
-+@BINPATH@/browser/extensions/cloakfox-shield@cloakfox.xpi
 +@RESPATH@/cloakfox.cfg
 +
  ; [Default Preferences]
