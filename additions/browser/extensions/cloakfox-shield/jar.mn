@@ -1,0 +1,18 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+browser.jar:
+    builtin-addons/cloakfox-shield/manifest.json          (manifest.json)
+    builtin-addons/cloakfox-shield/dist/background/index.js (dist/background/index.js)
+    builtin-addons/cloakfox-shield/dist/content/index.js   (dist/content/index.js)
+    builtin-addons/cloakfox-shield/dist/inject/index.js    (dist/inject/index.js)
+    builtin-addons/cloakfox-shield/dist/popup/index.js     (dist/popup/index.js)
+    builtin-addons/cloakfox-shield/dist/shared/crypto.js   (dist/shared/crypto.js)
+    builtin-addons/cloakfox-shield/dist/shared/index.js    (dist/shared/index.js)
+    builtin-addons/cloakfox-shield/dist/assets/popup.css   (dist/assets/popup.css)
+    builtin-addons/cloakfox-shield/dist/src/popup/index.html (dist/src/popup/index.html)
+    builtin-addons/cloakfox-shield/icons/icon-16.png       (icons/icon-16.png)
+    builtin-addons/cloakfox-shield/icons/icon-32.png       (icons/icon-32.png)
+    builtin-addons/cloakfox-shield/icons/icon-48.png       (icons/icon-48.png)
+    builtin-addons/cloakfox-shield/icons/icon-128.png      (icons/icon-128.png)

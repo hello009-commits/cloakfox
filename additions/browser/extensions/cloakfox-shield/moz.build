@@ -4,50 +4,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-# Cloakfox Shield — built-in extension for per-container fingerprint isolation
-
 DEFINES["MOZ_APP_VERSION"] = CONFIG["MOZ_APP_VERSION"]
 DEFINES["MOZ_APP_MAXVERSION"] = CONFIG["MOZ_APP_MAXVERSION"]
 
-FINAL_TARGET_FILES.features["cloakfox-shield@cloakfox"] += [
-    "manifest.json",
-]
-
-FINAL_TARGET_FILES.features["cloakfox-shield@cloakfox"].dist.background += [
-    "dist/background/index.js",
-]
-
-FINAL_TARGET_FILES.features["cloakfox-shield@cloakfox"].dist.content += [
-    "dist/content/index.js",
-]
-
-FINAL_TARGET_FILES.features["cloakfox-shield@cloakfox"].dist.inject += [
-    "dist/inject/index.js",
-]
-
-FINAL_TARGET_FILES.features["cloakfox-shield@cloakfox"].dist.popup += [
-    "dist/popup/index.js",
-]
-
-FINAL_TARGET_FILES.features["cloakfox-shield@cloakfox"].dist.shared += [
-    "dist/shared/crypto.js",
-    "dist/shared/index.js",
-]
-
-FINAL_TARGET_FILES.features["cloakfox-shield@cloakfox"].dist.assets += [
-    "dist/assets/popup.css",
-]
-
-FINAL_TARGET_FILES.features["cloakfox-shield@cloakfox"].dist.src.popup += [
-    "dist/src/popup/index.html",
-]
-
-FINAL_TARGET_FILES.features["cloakfox-shield@cloakfox"].icons += [
-    "icons/icon-128.png",
-    "icons/icon-16.png",
-    "icons/icon-32.png",
-    "icons/icon-48.png",
-]
+JAR_MANIFESTS += ["jar.mn"]
 
 with Files("**"):
     BUG_COMPONENT = ("Cloakfox", "Shield")
