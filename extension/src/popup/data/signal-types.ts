@@ -22,8 +22,9 @@ export const CORE_SIGNALS: Record<string, SignalType> = {
   // Hardware
   'hardware.screen': 'core',          // setScreenDimensions + setScreenColorDepth
   'hardware.hardwareConcurrency': 'core', // setNavigatorHardwareConcurrency
-  'hardware.battery': 'core',         // setBatteryStatus
-  'hardware.mediaDevices': 'core',    // setMediaDeviceCounts
+  'hardware.battery': 'core',         // setBatteryStatus (charging + level)
+  // MediaDevices uses MaskConfig (env var), not window.setXxx() yet
+  // 'hardware.mediaDevices': 'core', // future: setMediaDeviceCounts
 
   // Navigator
   'navigator.userAgent': 'core',      // setNavigatorUserAgent + setNavigatorPlatform + setNavigatorOscpu
