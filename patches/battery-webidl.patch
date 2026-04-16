@@ -130,7 +130,7 @@ index xxxxxxxxxx..yyyyyyyyyy 100644
 @@ -536,6 +537,10 @@ SOURCES += [
      "nsPluginArray.cpp",
  ]
-
+ 
 +# BatteryStatusManager compiled separately to avoid unified build scope issues
 +# (includes RoverfoxStorageManager.h which can affect compilation units)
 +SOURCES += ["BatteryStatusManager.cpp"]
@@ -143,9 +143,9 @@ index xxxxxxxxxx..yyyyyyyyyy 100644
 --- a/dom/base/nsGlobalWindowInner.h
 +++ b/dom/base/nsGlobalWindowInner.h
 @@ -686,6 +686,9 @@
-
+ 
    void ForgetSharedWorker(mozilla::dom::SharedWorker* aSharedWorker);
-
+ 
 +  // Per-context battery status spoofing
 +  void SetBatteryStatus(bool charging, double level, mozilla::ErrorResult& aRv);
 +
@@ -156,17 +156,17 @@ diff --git a/dom/base/nsGlobalWindowInner.cpp b/dom/base/nsGlobalWindowInner.cpp
 index xxxxxxxxxx..yyyyyyyyyy 100644
 --- a/dom/base/nsGlobalWindowInner.cpp
 +++ b/dom/base/nsGlobalWindowInner.cpp
-@@ -7,6 +7,7 @@
-
+@@ -7,5 +7,6 @@
+ 
  #include "nsGlobalWindowInner.h"
 +#include "BatteryStatusManager.h"
-
+ 
  #include <inttypes.h>
  #include <stdio.h>
 @@ -7478,6 +7479,30 @@ void nsGlobalWindowInner::ForgetSharedWorker(SharedWorker* aSharedWorker) {
    mSharedWorkers.RemoveElement(aSharedWorker);
  }
-
+ 
 +void nsGlobalWindowInner::SetBatteryStatus(bool charging, double level,
 +                                            ErrorResult& aRv) {
 +  uint32_t userContextId = 0;
@@ -201,7 +201,7 @@ index 6322093fd9..fedcba9876 100644
 @@ -9,6 +9,9 @@
  #include <cmath>
  #include <limits>
-
+ 
 +#include "BatteryStatusManager.h"
 +#include "nsGlobalWindowInner.h"
 +#include "mozilla/dom/BrowsingContext.h"
@@ -209,7 +209,7 @@ index 6322093fd9..fedcba9876 100644
  #include "mozilla/DOMEventTargetHelper.h"
  #include "mozilla/Hal.h"
 @@ -53,6 +56,21 @@ JSObject* BatteryManager::WrapObject(JSContext* aCx,
-
+ 
  bool BatteryManager::Charging() const {
    MOZ_ASSERT(NS_IsMainThread());
 +  // Cloakfox: per-context battery charging from RoverfoxStorageManager
@@ -231,7 +231,7 @@ index 6322093fd9..fedcba9876 100644
    if (Preferences::GetBool("dom.battery.test.default", false)) {
      return true;
 @@ -103,6 +121,21 @@ double BatteryManager::ChargingTime() const {
-
+ 
  double BatteryManager::Level() const {
    MOZ_ASSERT(NS_IsMainThread());
 +  // Cloakfox: per-context battery level from RoverfoxStorageManager
@@ -256,10 +256,10 @@ diff --git a/dom/webidl/Window.webidl b/dom/webidl/Window.webidl
 index xxxxxxxxxx..yyyyyyyyyy 100644
 --- a/dom/webidl/Window.webidl
 +++ b/dom/webidl/Window.webidl
-@@ -892,6 +892,12 @@ partial interface Window {
+@@ -892,7 +892,13 @@ partial interface Window {
    readonly attribute VisualViewport visualViewport;
  };
-
+ 
 +// Per-context battery status spoofing
 +partial interface Window {
 +  [Throws, Func="mozilla::dom::BatteryStatusManager::IsFunctionEnabledForWebIDL"]
@@ -269,3 +269,4 @@ index xxxxxxxxxx..yyyyyyyyyy 100644
  // Used to assign marks to appear on the scrollbar when
  // finding on a page.
  partial interface Window {
+ 

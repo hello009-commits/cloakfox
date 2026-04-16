@@ -128,7 +128,7 @@ index xxxxxxxxxx..yyyyyyyyyy 100644
 @@ -537,6 +538,10 @@ SOURCES += [
      "nsPluginArray.cpp",
  ]
-
+ 
 +# MediaDeviceCountManager compiled separately to avoid unified build scope issues
 +# (includes RoverfoxStorageManager.h which can affect compilation units)
 +SOURCES += ["MediaDeviceCountManager.cpp"]
@@ -141,32 +141,32 @@ index xxxxxxxxxx..yyyyyyyyyy 100644
 --- a/dom/base/nsGlobalWindowInner.h
 +++ b/dom/base/nsGlobalWindowInner.h
 @@ -686,6 +686,10 @@
-
+ 
    void ForgetSharedWorker(mozilla::dom::SharedWorker* aSharedWorker);
-
+ 
 +  // Per-context media device count spoofing
 +  void SetMediaDeviceCounts(uint32_t mics, uint32_t cams, uint32_t speakers,
 +                            mozilla::ErrorResult& aRv);
 +
    // Per-context battery status spoofing
    void SetBatteryStatus(bool charging, double level, mozilla::ErrorResult& aRv);
-
+ 
 diff --git a/dom/base/nsGlobalWindowInner.cpp b/dom/base/nsGlobalWindowInner.cpp
 index xxxxxxxxxx..yyyyyyyyyy 100644
 --- a/dom/base/nsGlobalWindowInner.cpp
 +++ b/dom/base/nsGlobalWindowInner.cpp
 @@ -7,6 +7,7 @@
-
+ 
  #include "nsGlobalWindowInner.h"
  #include "MaskConfig.hpp"
 +#include "MediaDeviceCountManager.h"
  #include "BatteryStatusManager.h"
-
+ 
  #include <inttypes.h>
-@@ -7479,6 +7480,32 @@ void nsGlobalWindowInner::ForgetSharedWorker(SharedWorker* aSharedWorker) {
+@@ -7479,6 +7480,33 @@ void nsGlobalWindowInner::ForgetSharedWorker(SharedWorker* aSharedWorker) {
    mSharedWorkers.RemoveElement(aSharedWorker);
  }
-
+ 
 +void nsGlobalWindowInner::SetMediaDeviceCounts(uint32_t mics, uint32_t cams,
 +                                                uint32_t speakers,
 +                                                ErrorResult& aRv) {
@@ -206,11 +206,11 @@ index 9088f71793..aabbccddee 100644
  #include "nsQueryObject.h"
  #include "MaskConfig.hpp"
 +#include "MediaDeviceCountManager.h"
-
+ 
  namespace mozilla::dom {
-
-@@ -333,6 +334,28 @@ RefPtr<MediaDeviceSetRefCnt> MediaDevices::FilterExposedDevices(
-
+ 
+@@ -333,16 +334,37 @@ RefPtr<MediaDeviceSetRefCnt> MediaDevices::FilterExposedDevices(
+ 
    // Replaces the RFP-based device count spoofing with one that controls the
    // number of devices exposed.
 +  // Cloakfox: per-context media device counts from RoverfoxStorageManager
@@ -233,12 +233,12 @@ index 9088f71793..aabbccddee 100644
 +    bool hasSpeakers = MediaDeviceCountManager::GetSpeakers(ucid, perCtxSpeakers);
 +    hasPerCtx = hasMics || hasCams || hasSpeakers;
 +  }
-
+ 
 -  if (!MaskConfig::GetBool("mediaDevices:enabled")) {
 +  if (!hasPerCtx && !MaskConfig::GetBool("mediaDevices:enabled")) {
      return exposed;
    }
-
+ 
 -  uint32_t numMics = MaskConfig::GetUint32("mediaDevices:micros").value_or(3);
 -  uint32_t numWebcams =
 -      MaskConfig::GetUint32("mediaDevices:webcams").value_or(1);
@@ -250,17 +250,17 @@ index 9088f71793..aabbccddee 100644
 +      : MaskConfig::GetUint32("mediaDevices:webcams").value_or(1);
 +  uint32_t numSpeakers = hasPerCtx ? perCtxSpeakers
 +      : MaskConfig::GetUint32("mediaDevices:speakers").value_or(1);
-
+ 
    // Clear existing devices. We'll add our own
    exposed->Clear();
 diff --git a/dom/webidl/Window.webidl b/dom/webidl/Window.webidl
 index xxxxxxxxxx..yyyyyyyyyy 100644
 --- a/dom/webidl/Window.webidl
 +++ b/dom/webidl/Window.webidl
-@@ -892,6 +892,12 @@ partial interface Window {
+@@ -892,7 +892,13 @@ partial interface Window {
    readonly attribute VisualViewport visualViewport;
  };
-
+ 
 +// Per-context media device count spoofing
 +partial interface Window {
 +  [Throws, Func="mozilla::dom::MediaDeviceCountManager::IsFunctionEnabledForWebIDL"]
@@ -270,3 +270,4 @@ index xxxxxxxxxx..yyyyyyyyyy 100644
  // Per-context battery status spoofing
  partial interface Window {
    [Throws, Func="mozilla::dom::BatteryStatusManager::IsFunctionEnabledForWebIDL"]
+ 
