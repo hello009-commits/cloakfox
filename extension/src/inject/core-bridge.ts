@@ -179,6 +179,39 @@ export function applyCoreProtections(
     }
   }
 
+  // ─── History Length ─────────────────────────────────────────
+  if (settings.navigator?.tabHistory !== 'off') {
+    const rng = subPRNG(masterSeed, 'core.history');
+    const length = rng.nextInt(1, 8);
+    if (callCore('setHistoryLength', length)) {
+      handled.add('navigator.tabHistory');
+    }
+  }
+
+  // ─── Geolocation ──────────────────────────────────────────
+  if (settings.network?.geolocation !== 'off') {
+    const rng = subPRNG(masterSeed, 'core.geolocation');
+    // Generate a plausible location (major city coordinates)
+    const cities = [
+      { lat: 40.7128, lon: -74.0060 },  // New York
+      { lat: 51.5074, lon: -0.1278 },   // London
+      { lat: 48.8566, lon: 2.3522 },    // Paris
+      { lat: 35.6762, lon: 139.6503 },  // Tokyo
+      { lat: 37.7749, lon: -122.4194 }, // San Francisco
+      { lat: 52.5200, lon: 13.4050 },   // Berlin
+      { lat: 55.7558, lon: 37.6173 },   // Moscow
+      { lat: -33.8688, lon: 151.2093 }, // Sydney
+    ];
+    const city = cities[rng.nextInt(0, cities.length - 1)];
+    // Add small random offset (within ~5km)
+    const lat = city.lat + (rng.nextInt(-50, 50) / 1000);
+    const lon = city.lon + (rng.nextInt(-50, 50) / 1000);
+    const accuracy = rng.nextInt(10, 100);
+    if (callCore('setGeolocation', lat, lon, accuracy)) {
+      handled.add('network.geolocation');
+    }
+  }
+
   // ─── WebRTC ──────────────────────────────────────────────────
   if (settings.network?.webrtc !== 'off') {
     const rng = subPRNG(masterSeed, 'core.webrtc');

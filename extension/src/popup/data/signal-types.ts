@@ -41,6 +41,10 @@ export const CORE_SIGNALS: Record<string, SignalType> = {
 
   // Speech
   'speech.synthesis': 'core',         // setSpeechVoices
+
+  // New WebIDL patches
+  'navigator.tabHistory': 'core',     // setHistoryLength
+  'network.geolocation': 'core',      // setGeolocation
 };
 
 /** Get the protection type for a signal */

@@ -221,7 +221,7 @@ export function initializeSpoofers(config: InjectConfig): void {
   safe('vendorFlavors', () => { if (settings.navigator.vendorFlavors !== 'off') initVendorFlavorSpoofer(settings.navigator.vendorFlavors, pagePRNG); });
   safe('fontPrefs', () => { if (settings.navigator.fontPreferences !== 'off') initFontPreferencesSpoofer(settings.navigator.fontPreferences, pagePRNG); });
   safe('windowName', () => { if (settings.navigator.windowName !== 'off') initWindowNameSpoofer(settings.navigator.windowName, pagePRNG); });
-  safe('tabHistory', () => { if (settings.navigator.tabHistory !== 'off') initTabHistorySpoofer(settings.navigator.tabHistory, pagePRNG); });
+  safe('tabHistory', () => { if (settings.navigator.tabHistory !== 'off' && !skip('navigator.tabHistory')) initTabHistorySpoofer(settings.navigator.tabHistory, pagePRNG); });
   safe('mediaCapabilities', () => { if (settings.navigator.mediaCapabilities !== 'off') initMediaCapabilitiesSpoofer(settings.navigator.mediaCapabilities, pagePRNG); });
 
   safe('timezone', () => {
@@ -235,7 +235,7 @@ export function initializeSpoofers(config: InjectConfig): void {
 
   safe('webrtc', () => { if (settings.network.webrtc !== 'off' && !skip('network.webrtc')) initWebRTCSpoofer(settings.network.webrtc, pagePRNG); });
   safe('connection', () => { if (settings.network.connection !== 'off') initNetworkSpoofer(settings.network.connection, pagePRNG); });
-  safe('geolocation', () => { if (settings.network.geolocation !== 'off') initGeolocationSpoofer(settings.network.geolocation, pagePRNG); });
+  safe('geolocation', () => { if (settings.network.geolocation !== 'off' && !skip('network.geolocation')) initGeolocationSpoofer(settings.network.geolocation, pagePRNG); });
   safe('websocket', () => { if (settings.network.websocket !== 'off') initWebSocketSpoofer(settings.network.websocket, pagePRNG); });
 
   safe('performance', () => { if (settings.timing.performance !== 'off') initPerformanceSpoofer(settings.timing.performance, pagePRNG); });
