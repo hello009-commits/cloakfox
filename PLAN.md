@@ -774,3 +774,15 @@ mk_add_options MOZ_MAKE_FLAGS="-j$(sysctl -n hw.ncpu)"
 - `patches/navigator-spoofing.patch` — NavigatorManager (uses mUserContextId)
 - `patches/cross-process-storage.patch` — RoverfoxStorageManager
 - (+ 22 more patches listed in Section 4)
+
+## TODO: Playwright/Automation Integration
+
+MaskConfig (`CLOAK_CONFIG` env var) is currently dead code — the C++ patches read from it but we never set it. To enable Camoufox-style Playwright automation:
+
+1. Create a Python/Node launcher that sets `CLOAK_CONFIG` JSON env var before launching Cloakfox
+2. The JSON format matches Camoufox's: `{"canvas:seed": 123, "navigator:platform": "Win32", "battery:charging": true, ...}`
+3. MaskConfig in C++ already reads this — no browser patches needed
+4. Extension's per-context values (via `window.setXxx()`) take priority over MaskConfig
+5. This enables headless automation with spoofed fingerprints (like Camoufox + Playwright)
+
+Priority chain: Extension (per-container) > MaskConfig (per-launch) > Real values
