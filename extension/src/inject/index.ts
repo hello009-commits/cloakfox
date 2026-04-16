@@ -156,6 +156,7 @@ const config: InjectConfig = {
   containerId: 'fallback',
   domain,
   seed,
+  useCoreEngine: true,
   settings: createDefaultSettings().spoofers,
   profile: { mode: 'random' as const },
   assignedProfile: generateProfile(seed),

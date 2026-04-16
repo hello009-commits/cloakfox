@@ -169,6 +169,7 @@ export interface InjectConfig {
   containerId: string;
   domain: string;
   seed: string;
+  useCoreEngine: boolean;
   settings: import('./settings').SpooferSettings;
   profile: import('./settings').ProfileConfig;
   assignedProfile?: AssignedProfileData;

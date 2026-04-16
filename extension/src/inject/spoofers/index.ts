@@ -153,13 +153,20 @@ export function initializeSpoofers(config: InjectConfig): void {
 
   const { settings, assignedProfile } = config;
 
-  // Try C++ Core protections first — returns set of signals handled at engine level
-  // Uses isolated sub-PRNGs per signal, so doesn't affect pagePRNG state
-  const coreHandled = applyCoreProtections(
-    hashedSeed,
-    assignedProfile,
-    settings as unknown as Record<string, Record<string, string>>
-  );
+  // Try C++ Core protections first (unless user disabled Core engine)
+  let coreHandled = new Set<string>();
+  if (config.useCoreEngine !== false) {
+    coreHandled = applyCoreProtections(
+      hashedSeed,
+      assignedProfile,
+      settings as unknown as Record<string, Record<string, string>>
+    );
+    if (coreHandled.size > 0) {
+      console.log(`[Cloakfox] Core engine handled ${coreHandled.size} signals:`, [...coreHandled].join(', '));
+    }
+  } else {
+    console.log('[Cloakfox] Core engine disabled — using JS spoofing for all signals');
+  }
 
   // Skip JS spoofer if Core already handled the signal
   const skip = (key: string) => coreHandled.has(key);

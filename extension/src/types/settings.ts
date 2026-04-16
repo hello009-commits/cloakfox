@@ -302,6 +302,7 @@ export interface SpooferSettings {
 export interface ContainerSettings {
   enabled: boolean;
   protectionLevel: ProtectionLevel;
+  useCoreEngine: boolean; // Use C++ Core spoofing when available (falls back to JS if off)
   profile: ProfileConfig;
   headers: HeaderConfig;
   spoofers: SpooferSettings;
@@ -372,6 +373,7 @@ export function createDefaultSettings(): ContainerSettings {
   return {
     enabled: true,
     protectionLevel: 2, // Balanced
+    useCoreEngine: true, // Use C++ Core when available
     profile: {
       mode: 'random',
     },

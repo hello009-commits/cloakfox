@@ -79,6 +79,29 @@ export default function SettingsTab({
 
   return (
     <div className="space-y-3">
+      {/* Core Engine Toggle */}
+      <div className="card">
+        <div className="section-label">Protection Engine</div>
+        <div className="row">
+          <div>
+            <div style={{ fontSize: '12px' }}>Use C++ Core engine</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px' }}>
+              {settings.useCoreEngine !== false
+                ? 'Core signals handled at browser engine level (undetectable)'
+                : 'All signals use JS spoofing (extension-level)'}
+            </div>
+          </div>
+          <div
+            className={`toggle ${settings.useCoreEngine !== false ? 'on' : ''}`}
+            onClick={() => onSaveSettings({ useCoreEngine: !settings.useCoreEngine })}
+          />
+        </div>
+        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>
+          Core uses C++ patches in the Cloakfox browser engine — completely invisible to fingerprinting scripts.
+          Disable to fall back to JS spoofing for all signals (useful for debugging).
+        </div>
+      </div>
+
       {/* Apply to Containers */}
       <div className="card">
         <div className="section-label">Sync to Containers</div>
