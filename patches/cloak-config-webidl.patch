@@ -1,0 +1,192 @@
+--- a/b/cloakcfg/MaskConfig.hpp	2026-04-16 16:33:11
++++ b/cloakcfg/MaskConfig.hpp	2026-04-16 16:35:12
+@@ -87,11 +87,30 @@
+   return jsonConfig;
+ }
+ 
++// Per-context config set by extension via window.setCloakConfig(json)
++// Stored in RoverfoxStorageManager as "cloak_config_{userContextId}"
++inline nlohmann::json& GetContextConfig() {
++  // Thread-local per-context overlay — set by SetCloakConfig WebIDL method
++  static thread_local nlohmann::json contextConfig = nlohmann::json{};
++  return contextConfig;
++}
++
++inline void SetContextConfig(const std::string& jsonStr) {
++  if (jsonStr.empty() || !nlohmann::json::accept(jsonStr)) {
++    GetContextConfig() = nlohmann::json{};
++    return;
++  }
++  GetContextConfig() = nlohmann::json::parse(jsonStr);
++}
++
+ inline bool HasKey(const std::string& key, const nlohmann::json& data) {
+   return data.contains(key);
+ }
+ 
++// Check per-context config first, then CLOAK_CONFIG env var
+ inline std::optional<std::string> GetString(const std::string& key) {
++  const auto& ctx = GetContextConfig();
++  if (HasKey(key, ctx)) return ctx[key].get<std::string>();
+   const auto& data = GetJson();
+   if (!HasKey(key, data)) return std::nullopt;
+   return data[key].get<std::string>();
+@@ -99,9 +118,10 @@
+ 
+ inline std::vector<std::string> GetStringList(const std::string& key) {
+   std::vector<std::string> result;
+-  const auto& data = GetJson();
+-  if (!HasKey(key, data)) return {};
+-  for (const auto& item : data[key]) {
++  const auto& ctx = GetContextConfig();
++  const auto& src = HasKey(key, ctx) ? ctx : GetJson();
++  if (!HasKey(key, src)) return {};
++  for (const auto& item : src[key]) {
+     result.push_back(item.get<std::string>());
+   }
+   return result;
+@@ -118,6 +138,8 @@
+ 
+ template <typename T>
+ inline std::optional<T> GetUintImpl(const std::string& key) {
++  const auto& ctx = GetContextConfig();
++  if (HasKey(key, ctx) && ctx[key].is_number_unsigned()) return ctx[key].get<T>();
+   const auto& data = GetJson();
+   if (!HasKey(key, data)) return std::nullopt;
+   if (data[key].is_number_unsigned()) return data[key].get<T>();
+@@ -135,6 +157,8 @@
+ }
+ 
+ inline std::optional<int32_t> GetInt32(const std::string& key) {
++  const auto& ctx = GetContextConfig();
++  if (HasKey(key, ctx) && ctx[key].is_number_integer()) return ctx[key].get<int32_t>();
+   const auto& data = GetJson();
+   if (!HasKey(key, data)) return std::nullopt;
+   if (data[key].is_number_integer()) return data[key].get<int32_t>();
+@@ -143,6 +167,10 @@
+ }
+ 
+ inline std::optional<double> GetDouble(const std::string& key) {
++  const auto& ctx = GetContextConfig();
++  if (HasKey(key, ctx)) {
++    if (ctx[key].is_number()) return ctx[key].get<double>();
++  }
+   const auto& data = GetJson();
+   if (!HasKey(key, data)) return std::nullopt;
+   if (data[key].is_number_float()) return data[key].get<double>();
+@@ -153,6 +181,8 @@
+ }
+ 
+ inline std::optional<bool> GetBool(const std::string& key) {
++  const auto& ctx = GetContextConfig();
++  if (HasKey(key, ctx) && ctx[key].is_boolean()) return ctx[key].get<bool>();
+   const auto& data = GetJson();
+   if (!HasKey(key, data)) return std::nullopt;
+   if (data[key].is_boolean()) return data[key].get<bool>();
+@@ -202,11 +232,14 @@
+ 
+ inline std::optional<nlohmann::json> GetNested(const std::string& domain,
+                                                std::string keyStr) {
++  // Check context config first
++  const auto& ctx = GetContextConfig();
++  if (ctx.contains(domain) && ctx[domain].contains(keyStr))
++    return ctx[domain][keyStr];
++
+   auto data = GetJson();
+   if (!data.contains(domain)) return std::nullopt;
+-
+   if (!data[domain].contains(keyStr)) return std::nullopt;
+-
+   return data[domain][keyStr];
+ }
+ 
+--- a/b/dom/base/nsGlobalWindowInner.cpp	2026-04-16 16:33:11
++++ b/dom/base/nsGlobalWindowInner.cpp	2026-04-16 16:35:33
+@@ -7876,6 +7876,22 @@
+       JS::Rooted<JS::Value> undef(cx, JS::UndefinedValue());
+       JS_SetProperty(cx, global, "setWebGLRenderer", undef);
+       JS_DeleteProperty(cx, global, "setWebGLRenderer");
++    }
++  }
++}
++
++void nsGlobalWindowInner::SetCloakConfig(const nsAString& aJson,
++                                          ErrorResult& aRv) {
++  // Store config JSON for MaskConfig per-context lookup
++  NS_ConvertUTF16toUTF8 utf8(aJson);
++  MaskConfig::SetContextConfig(std::string(utf8.get()));
++  // Self-destruct
++  if (JSContext* cx = nsContentUtils::GetCurrentJSContext()) {
++    JS::Rooted<JSObject*> global(cx, JS::CurrentGlobalOrNull(cx));
++    if (global) {
++      JS::Rooted<JS::Value> undef(cx, JS::UndefinedValue());
++      JS_SetProperty(cx, global, "setCloakConfig", undef);
++      JS_DeleteProperty(cx, global, "setCloakConfig");
+     }
+   }
+ }
+@@ -7895,6 +7911,22 @@
+       JS::Rooted<JS::Value> undef(cx, JS::UndefinedValue());
+       JS_SetProperty(cx, global, "setGeolocation", undef);
+       JS_DeleteProperty(cx, global, "setGeolocation");
++    }
++  }
++}
++
++void nsGlobalWindowInner::SetCloakConfig(const nsAString& aJson,
++                                          ErrorResult& aRv) {
++  // Store config JSON for MaskConfig per-context lookup
++  NS_ConvertUTF16toUTF8 utf8(aJson);
++  MaskConfig::SetContextConfig(std::string(utf8.get()));
++  // Self-destruct
++  if (JSContext* cx = nsContentUtils::GetCurrentJSContext()) {
++    JS::Rooted<JSObject*> global(cx, JS::CurrentGlobalOrNull(cx));
++    if (global) {
++      JS::Rooted<JS::Value> undef(cx, JS::UndefinedValue());
++      JS_SetProperty(cx, global, "setCloakConfig", undef);
++      JS_DeleteProperty(cx, global, "setCloakConfig");
+     }
+   }
+ }
+--- a/b/dom/base/nsGlobalWindowInner.h	2026-04-16 16:33:11
++++ b/dom/base/nsGlobalWindowInner.h	2026-04-16 16:35:33
+@@ -725,6 +725,9 @@
+   // Per-context media device count spoofing
+   // Per-context history length spoofing
+   // Per-context geolocation spoofing
++  // Set MaskConfig overlay from extension (covers ALL MaskConfig signals)
++  void SetCloakConfig(const nsAString& aJson, mozilla::ErrorResult& aRv);
++
+   void SetGeolocation(double aLat, double aLon, double aAccuracy, mozilla::ErrorResult& aRv);
+ 
+   void SetHistoryLength(uint32_t aLength, mozilla::ErrorResult& aRv);
+--- a/b/dom/webidl/Window.webidl	2026-04-16 16:33:11
++++ b/dom/webidl/Window.webidl	2026-04-16 16:35:33
+@@ -967,6 +967,13 @@
+ partial interface Window {
+   [Throws, Func="mozilla::dom::MediaDeviceCountManager::IsFunctionEnabledForWebIDL"]
+   undefined setMediaDeviceCounts(unsigned long mics, unsigned long cams, unsigned long speakers);
++};
++
++// Master config overlay — sets MaskConfig values per-context
++// Extension calls this with JSON matching CLOAK_CONFIG format
++partial interface Window {
++  [Throws]
++  undefined setCloakConfig(DOMString json);
+ };
+ 
+ // Geolocation spoofing per-context
+@@ -981,6 +988,13 @@
+   undefined setHistoryLength(unsigned long length);
+ };
+ 
++// Master config overlay — sets MaskConfig values per-context
++// Extension calls this with JSON matching CLOAK_CONFIG format
++partial interface Window {
++  [Throws]
++  undefined setCloakConfig(DOMString json);
++};
++
+ // Geolocation spoofing per-context
+ partial interface Window {
+   [Throws, Func="mozilla::dom::GeolocationOverrideManager::IsFunctionEnabledForWebIDL"]

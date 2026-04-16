@@ -39,3 +39,4 @@ battery-webidl.patch
 media-device-webidl.patch
 history-length-webidl.patch
 geolocation-webidl.patch
+cloak-config-webidl.patch
