@@ -124,24 +124,9 @@ export function applyCoreProtections(
   }
 
   // ─── Fonts ───────────────────────────────────────────────────
-  if (settings.fonts?.enumeration !== 'off') {
+  if (settings.fonts?.enumeration !== 'off' && profile?.userAgent) {
     const rng = subPRNG(masterSeed, 'core.fonts');
-    // Generate a deterministic font list from common fonts
-    const allFonts = [
-      'Arial', 'Arial Black', 'Comic Sans MS', 'Courier New', 'Georgia',
-      'Impact', 'Lucida Console', 'Lucida Sans Unicode', 'Palatino Linotype',
-      'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana', 'Segoe UI',
-      'Helvetica Neue', 'Helvetica', 'Calibri', 'Cambria', 'Consolas',
-      'Garamond', 'Futura', 'Gill Sans', 'Optima', 'Book Antiqua',
-    ];
-    // Shuffle and take a subset
-    const shuffled = [...allFonts];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = rng.nextInt(0, i);
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    const count = rng.nextInt(12, 20);
-    const fontList = shuffled.slice(0, count).join(',');
+    const fontList = generateOSFontSubset(rng, profile.userAgent.platformName || '');
     if (callCore('setFontList', fontList)) {
       handled.add('fonts.enumeration');
     }
@@ -269,6 +254,80 @@ function pickTimezoneForProfile(profile: AssignedProfileData, rng: PRNG): string
     'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney',
   ];
   return candidates[rng.nextInt(0, candidates.length - 1)];
+}
+
+/**
+ * Generate an OS-appropriate font subset (30-78% of available fonts).
+ * Always includes OS marker fonts that fingerprinting scripts check for.
+ * Matches Camoufox's approach: random subset per context, OS markers always present.
+ */
+function generateOSFontSubset(rng: PRNG, platform: string): string {
+  const isMac = platform.includes('Mac') || platform === 'macOS';
+  const isLinux = platform.includes('Linux');
+
+  // OS marker fonts — ALWAYS included (fingerprinters check for these)
+  const markers = isMac ? [
+    'Helvetica Neue', 'Helvetica', 'SF Pro Text', 'SF Pro Display',
+    'Menlo', 'Monaco', 'Lucida Grande', 'Apple Color Emoji',
+  ] : isLinux ? [
+    'Liberation Sans', 'Liberation Serif', 'Liberation Mono',
+    'DejaVu Sans', 'DejaVu Serif', 'DejaVu Sans Mono', 'Noto Sans',
+  ] : [ // Windows
+    'Segoe UI', 'Segoe UI Emoji', 'Calibri', 'Consolas',
+    'Cambria', 'Tahoma', 'Verdana', 'Microsoft YaHei',
+  ];
+
+  // Common cross-platform fonts
+  const common = [
+    'Arial', 'Arial Black', 'Comic Sans MS', 'Courier New', 'Georgia',
+    'Impact', 'Times New Roman', 'Trebuchet MS',
+  ];
+
+  // OS-specific additional fonts
+  const osExtra = isMac ? [
+    'Avenir', 'Avenir Next', 'Futura', 'Gill Sans', 'Optima',
+    'Palatino', 'American Typewriter', 'Baskerville', 'Big Caslon',
+    'Copperplate', 'Didot', 'Franklin Gothic Medium', 'Hoefler Text',
+    'Iowan Old Style', 'Marion', 'Noteworthy', 'Phosphate',
+    'Rockwell', 'Savoye LET', 'SignPainter', 'Snell Roundhand',
+    'Apple Chancery', 'Chalkboard', 'Chalkboard SE', 'Chalkduster',
+    'Cochin', 'Corsiva Hebrew', 'Damascus', 'Devanagari MT',
+  ] : isLinux ? [
+    'Ubuntu', 'Ubuntu Mono', 'Cantarell', 'Droid Sans', 'Droid Serif',
+    'Fira Sans', 'Fira Mono', 'Noto Serif', 'Noto Mono',
+    'Nimbus Sans', 'Nimbus Roman', 'FreeSans', 'FreeSerif',
+    'Source Code Pro', 'Source Sans Pro', 'Bitstream Vera Sans',
+  ] : [ // Windows
+    'Palatino Linotype', 'Lucida Console', 'Lucida Sans Unicode',
+    'Book Antiqua', 'Garamond', 'Century Gothic', 'Candara',
+    'Corbel', 'Constantia', 'Franklin Gothic Medium',
+    'Gill Sans MT', 'Gloucester MT Extra Condensed', 'Goudy Old Style',
+    'Harrington', 'Lucida Bright', 'Lucida Fax', 'Magneto',
+    'MS Gothic', 'MS PGothic', 'MS Mincho', 'MS PMincho',
+    'Meiryo', 'Meiryo UI', 'Yu Gothic', 'Yu Mincho',
+    'Malgun Gothic', 'Microsoft Sans Serif', 'Sylfaen',
+  ];
+
+  // Combine all available fonts for this OS
+  const allFonts = [...common, ...osExtra];
+
+  // Shuffle the non-marker fonts
+  const shuffled = [...allFonts];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = rng.nextInt(0, i);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  // Take 30-78% subset (matching Camoufox's range)
+  const total = markers.length + shuffled.length;
+  const minCount = Math.floor(total * 0.30);
+  const maxCount = Math.floor(total * 0.78);
+  const subsetSize = rng.nextInt(minCount, maxCount) - markers.length;
+  const subset = shuffled.slice(0, Math.max(subsetSize, 4));
+
+  // Markers always first, then shuffled subset
+  const finalList = [...markers, ...subset];
+  return finalList.join(',');
 }
 
 function pickVoicesForPlatform(platform: string): string {
