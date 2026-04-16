@@ -4,6 +4,7 @@
 
 import type { InjectConfig } from '@/types';
 import { PRNG, base64ToUint8Array } from '@/lib/crypto';
+import { applyCoreProtections } from '../core-bridge';
 
 // Graphics
 import { initCanvasSpoofer } from './graphics/canvas';
@@ -152,16 +153,26 @@ export function initializeSpoofers(config: InjectConfig): void {
 
   const { settings, assignedProfile } = config;
 
+  // Try C++ Core protections first — returns set of signals handled at engine level
+  const coreHandled = applyCoreProtections(
+    pagePRNG,
+    assignedProfile,
+    settings as unknown as Record<string, Record<string, string>>
+  );
+
+  // Skip JS spoofer if Core already handled the signal
+  const skip = (key: string) => coreHandled.has(key);
+
   // Wrap each spoofer init so one failure doesn't crash all others
   const safe = (name: string, fn: () => void) => {
     try { fn(); } catch { /* spoofer init failed — continue with others */ }
   };
 
-  // Graphics
-  safe('canvas', () => { if (settings.graphics.canvas !== 'off') initCanvasSpoofer(settings.graphics.canvas, pagePRNG); });
+  // Graphics (skip canvas/webgl if Core handled them)
+  safe('canvas', () => { if (settings.graphics.canvas !== 'off' && !skip('graphics.canvas')) initCanvasSpoofer(settings.graphics.canvas, pagePRNG); });
   let selectedGPURef: { vendor: string; renderer: string } | null = null;
   safe('webgl', () => {
-    if (settings.graphics.webgl !== 'off' || settings.graphics.webgl2 !== 'off') {
+    if ((settings.graphics.webgl !== 'off' || settings.graphics.webgl2 !== 'off') && !skip('graphics.webgl')) {
       initWebGLSpoofer(settings.graphics.webgl, settings.graphics.webgl2, pagePRNG, assignedProfile);
       selectedGPURef = getSelectedGPU();
     }
@@ -173,16 +184,16 @@ export function initializeSpoofers(config: InjectConfig): void {
   safe('textMetrics', () => { if (settings.graphics.textMetrics !== 'off') initTextMetricsSpoofer(settings.graphics.textMetrics, pagePRNG); });
   safe('svg', () => { if (settings.graphics.svg !== 'off') initSVGSpoofer(settings.graphics.svg, pagePRNG); });
 
-  safe('audio', () => { if (settings.audio.audioContext !== 'off') initAudioSpoofer(settings.audio.audioContext, pagePRNG); });
-  safe('offlineAudio', () => { if (settings.audio.offlineAudio !== 'off') initOfflineAudioSpoofer(settings.audio.offlineAudio, pagePRNG); });
+  safe('audio', () => { if (settings.audio.audioContext !== 'off' && !skip('audio.audioContext')) initAudioSpoofer(settings.audio.audioContext, pagePRNG); });
+  safe('offlineAudio', () => { if (settings.audio.offlineAudio !== 'off' && !skip('audio.offlineAudio')) initOfflineAudioSpoofer(settings.audio.offlineAudio, pagePRNG); });
   safe('audioLatency', () => { if (settings.audio.latency !== 'off') initAudioLatencySpoofer(settings.audio.latency, pagePRNG); });
   safe('codecs', () => { if (settings.audio.codecs !== 'off') initCodecSpoofer(settings.audio.codecs, pagePRNG); });
 
-  safe('screen', () => { if (settings.hardware.screen !== 'off') initScreenSpoofer(settings.hardware.screen, pagePRNG, assignedProfile?.screen); });
+  safe('screen', () => { if (settings.hardware.screen !== 'off' && !skip('hardware.screen')) initScreenSpoofer(settings.hardware.screen, pagePRNG, assignedProfile?.screen); });
   safe('screenFrame', () => { if (settings.hardware.screenFrame !== 'off') initScreenFrameSpoofer(settings.hardware.screenFrame, pagePRNG); });
   safe('orientation', () => { if (settings.hardware.orientation !== 'off') initScreenOrientationSpoofer(settings.hardware.orientation, pagePRNG); });
   safe('device', () => {
-    if (settings.hardware.deviceMemory !== 'off' || settings.hardware.hardwareConcurrency !== 'off') {
+    if ((settings.hardware.deviceMemory !== 'off' || settings.hardware.hardwareConcurrency !== 'off') && !skip('hardware.hardwareConcurrency')) {
       initDeviceSpoofer(settings.hardware.deviceMemory, settings.hardware.hardwareConcurrency, pagePRNG, assignedProfile);
     }
   });
@@ -194,7 +205,7 @@ export function initializeSpoofers(config: InjectConfig): void {
   safe('viewport', () => { if (settings.hardware.visualViewport !== 'off') initVisualViewportSpoofer(settings.hardware.visualViewport, pagePRNG); });
   safe('screenExt', () => { if (settings.hardware.screenExtended !== 'off') initScreenExtendedSpoofer(settings.hardware.screenExtended, pagePRNG); });
 
-  safe('navigator', () => { if (settings.navigator.userAgent !== 'off') initNavigatorSpoofer(settings.navigator, pagePRNG, config.profile, assignedProfile); });
+  safe('navigator', () => { if (settings.navigator.userAgent !== 'off' && !skip('navigator.userAgent')) initNavigatorSpoofer(settings.navigator, pagePRNG, config.profile, assignedProfile); });
   safe('clipboard', () => { if (settings.navigator.clipboard !== 'off') initClipboardSpoofer(settings.navigator.clipboard, pagePRNG); });
   safe('vibration', () => { if (settings.navigator.vibration !== 'off') initVibrationSpoofer(settings.navigator.vibration, pagePRNG); });
   safe('vendorFlavors', () => { if (settings.navigator.vendorFlavors !== 'off') initVendorFlavorSpoofer(settings.navigator.vendorFlavors, pagePRNG); });
@@ -204,15 +215,15 @@ export function initializeSpoofers(config: InjectConfig): void {
   safe('mediaCapabilities', () => { if (settings.navigator.mediaCapabilities !== 'off') initMediaCapabilitiesSpoofer(settings.navigator.mediaCapabilities, pagePRNG); });
 
   safe('timezone', () => {
-    if (settings.timezone.intl !== 'off' || settings.timezone.date !== 'off') {
+    if ((settings.timezone.intl !== 'off' || settings.timezone.date !== 'off') && !skip('timezone.intl')) {
       initTimezoneSpoofer(settings.timezone, pagePRNG, assignedProfile);
     }
   });
 
   safe('fonts', () => { if (settings.fonts.enumeration !== 'off') initFontSpoofer(settings.fonts.enumeration, pagePRNG, assignedProfile); });
-  safe('cssFonts', () => { if (settings.fonts.cssDetection !== 'off') initCSSFontSpoofer(settings.fonts.cssDetection, pagePRNG); });
+  safe('cssFonts', () => { if (settings.fonts.cssDetection !== 'off' && !skip('fonts.cssDetection')) initCSSFontSpoofer(settings.fonts.cssDetection, pagePRNG); });
 
-  safe('webrtc', () => { if (settings.network.webrtc !== 'off') initWebRTCSpoofer(settings.network.webrtc, pagePRNG); });
+  safe('webrtc', () => { if (settings.network.webrtc !== 'off' && !skip('network.webrtc')) initWebRTCSpoofer(settings.network.webrtc, pagePRNG); });
   safe('connection', () => { if (settings.network.connection !== 'off') initNetworkSpoofer(settings.network.connection, pagePRNG); });
   safe('geolocation', () => { if (settings.network.geolocation !== 'off') initGeolocationSpoofer(settings.network.geolocation, pagePRNG); });
   safe('websocket', () => { if (settings.network.websocket !== 'off') initWebSocketSpoofer(settings.network.websocket, pagePRNG); });
@@ -222,7 +233,7 @@ export function initializeSpoofers(config: InjectConfig): void {
   safe('eventLoop', () => { if (settings.timing.eventLoop !== 'off') initEventLoopJitter(settings.timing.eventLoop, pagePRNG); });
 
   safe('css', () => { if (settings.css.mediaQueries !== 'off') initCSSSpoofer(settings.css.mediaQueries, pagePRNG, assignedProfile); });
-  safe('speech', () => { if (settings.speech.synthesis !== 'off') initSpeechSpoofer(settings.speech.synthesis, pagePRNG); });
+  safe('speech', () => { if (settings.speech.synthesis !== 'off' && !skip('speech.synthesis')) initSpeechSpoofer(settings.speech.synthesis, pagePRNG); });
   safe('permissions', () => { if (settings.permissions.query !== 'off') initPermissionsSpoofer(settings.permissions.query, pagePRNG); });
   safe('notification', () => { if (settings.permissions.notification !== 'off') initNotificationSpoofer(settings.permissions.notification, pagePRNG); });
   safe('storage', () => { if (settings.storage.estimate !== 'off') initStorageSpoofer(settings.storage.estimate, pagePRNG); });
