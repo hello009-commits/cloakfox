@@ -64,13 +64,11 @@ set-target:
 	python3 scripts/patch.py $(version) $(release) --mozconfig-only
 
 extension:
-	cd extension && npm ci && npm run build:prod
+	cd extension && npm ci && npm run build
 	# Copy built extension into additions for built-in addon
 	rm -rf additions/browser/extensions/cloakfox-shield/dist
-	rm -rf additions/browser/extensions/cloakfox-shield/icons
 	cp -r extension/dist additions/browser/extensions/cloakfox-shield/
-	cp -r extension/icons additions/browser/extensions/cloakfox-shield/
-	cp extension/manifest.json additions/browser/extensions/cloakfox-shield/
+	# manifest.json is already in dist/ (copied by build)
 
 build:
 	@if [ ! -f $(cf_source_dir)/_READY ]; then \
